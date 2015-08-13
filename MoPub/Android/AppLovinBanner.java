@@ -1,11 +1,11 @@
 /**
  * AppLovin Banner SDK Mediation for MoPub
- * 
+ *
  * @author Matt Szaro
  * @version 1.2
  **/
 
-package YOUR_PACKAGE_NAME;
+package com.mopub.mobileads;
 
 import android.app.Activity;
 import android.content.Context;
@@ -23,13 +23,15 @@ public class AppLovinBanner extends CustomEventBanner implements AppLovinAdLoadL
     private CustomEventBanner.CustomEventBannerListener mBannerListener;
     private AppLovinAdView                              adView;
 
+    public static final String SDK_KEY = "sdk_key";
+
     /*
      * Abstract methods from CustomEventBanner
      */
     @Override
     public void loadBanner(Context context,
             CustomEventBanner.CustomEventBannerListener bannerListener,
-            Map localExtras, Map serverExtras)
+            Map<String, Object> localExtras, Map<String, String> serverExtras)
     {
         mBannerListener = bannerListener;
 
@@ -46,11 +48,23 @@ public class AppLovinBanner extends CustomEventBanner implements AppLovinAdLoadL
 
         Log.d( "AppLovinAdapter", "Request received for new BANNER." );
 
-        adView = new AppLovinAdView( AppLovinSdk.getInstance( context ), AppLovinAdSize.BANNER, activity );
+        AppLovinSdk appLovinSdk;
+        if (extrasAreValid(serverExtras)) {
+            String key = serverExtras.get(SDK_KEY);
+            appLovinSdk = AppLovinSdk.getInstance(key, AppLovinSdkUtils.retrieveUserSettings(context), context);
+        } else {
+            appLovinSdk = AppLovinSdk.getInstance(context);
+        }
+
+        adView = new AppLovinAdView(appLovinSdk, AppLovinAdSize.BANNER, activity);
         adView.setAutoDestroy( false );
         adView.setAdLoadListener( this );
         adView.setAdClickListener( this );
         adView.loadNextAd();
+    }
+
+    private boolean extrasAreValid(Map<String, String> extras) {
+        return extras.containsKey(SDK_KEY);
     }
 
     @Override

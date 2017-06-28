@@ -22,7 +22,6 @@ import com.google.android.gms.ads.mediation.MediationAdRequest;
 import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitial;
 import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitialListener;
 
-;
 
 /**
  * This class must be defined and referenced from AdMob's website for AdMob Mediation
@@ -36,7 +35,7 @@ public class AdMobMediationInterEvent implements CustomEventInterstitial {
     private CustomEventInterstitialListener mListener;
 
     @Override
-    public void onDestroy() {
+    public synchronized void onDestroy() {
         Log.i("admob", "admob on destroy called");
         lastAd = null;
         mListener = null;
@@ -52,23 +51,35 @@ public class AdMobMediationInterEvent implements CustomEventInterstitial {
     public void onResume() {
     }
 
-    private void notifySuccess(Activity activity, final CustomEventInterstitialListener listener) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                listener.onAdLoaded();
-            }
-        });
-
+    private synchronized void notifySuccess() {
+        if (null != mContext) {
+            Activity activity = (Activity)mContext;
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (AdMobMediationInterEvent.this) {
+                        if (null != mListener) {
+                            mListener.onAdLoaded();
+                        }
+                    }
+                }
+            });
+        }
     }
 
-    private void notifyFailure(Activity activity, final CustomEventInterstitialListener listener, final int error) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                listener.onAdFailedToLoad(error);
-            }
-        });
+    private synchronized void notifyFailure(final int error) {
+        if (null != mContext) {
+            Activity activity = (Activity)mContext;
+
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (AdMobMediationInterEvent.this) {
+                        mListener.onAdFailedToLoad(error);
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -95,7 +106,7 @@ public class AdMobMediationInterEvent implements CustomEventInterstitial {
             @Override
             public void adReceived(AppLovinAd ad) {
                 lastAd = ad;
-                notifySuccess((Activity) context, mListener);
+                notifySuccess();
 
             }
 
@@ -103,27 +114,26 @@ public class AdMobMediationInterEvent implements CustomEventInterstitial {
             public void failedToReceiveAd(int errorCode) {
 
                 if (errorCode == 204)
-                    notifyFailure((Activity) context, mListener, AdRequest.ERROR_CODE_NO_FILL);
+                    notifyFailure(AdRequest.ERROR_CODE_NO_FILL);
 
                 else if (errorCode == AppLovinErrorCodes.UNSPECIFIED_ERROR)
-                    notifyFailure((Activity) context, mListener, AdRequest.ERROR_CODE_INTERNAL_ERROR);
+                    notifyFailure(AdRequest.ERROR_CODE_INTERNAL_ERROR);
 
                 else if (errorCode == AppLovinErrorCodes.INVALID_URL)
-                    notifyFailure((Activity) context, mListener, AdRequest.ERROR_CODE_INVALID_REQUEST);
+                    notifyFailure( AdRequest.ERROR_CODE_INVALID_REQUEST);
 
                 else if (errorCode < 0)
-                    notifyFailure((Activity) context, mListener, AdRequest.ERROR_CODE_NETWORK_ERROR);
+                    notifyFailure(AdRequest.ERROR_CODE_NETWORK_ERROR);
 
                 else
-                    notifyFailure((Activity) context, mListener, AdRequest.ERROR_CODE_INTERNAL_ERROR);
-
+                    notifyFailure(AdRequest.ERROR_CODE_INTERNAL_ERROR);
 
             }
         });
     }
 
     @Override
-    public void showInterstitial() {
+    public synchronized void showInterstitial() {
         if (lastAd == null) return;
         if (mListener == null) return;
         if (mContext == null) return;
@@ -134,19 +144,31 @@ public class AdMobMediationInterEvent implements CustomEventInterstitial {
         dialog.setAdDisplayListener(new AppLovinAdDisplayListener() {
             @Override
             public void adHidden(AppLovinAd ad) {
-                mListener.onAdClosed();
+                synchronized (AdMobMediationInterEvent.this) {
+                    if (null != mListener) {
+                        mListener.onAdClosed();
+                    }
+                }
             }
 
             @Override
             public void adDisplayed(AppLovinAd ad) {
-                mListener.onAdOpened();
+                synchronized (AdMobMediationInterEvent.this) {
+                    if (null != mListener) {
+                        mListener.onAdOpened();
+                    }
+                }
             }
         });
 
         dialog.setAdClickListener(new AppLovinAdClickListener() {
             @Override
             public void adClicked(AppLovinAd appLovinAd) {
-                mListener.onAdLeftApplication();
+                synchronized (AdMobMediationInterEvent.this) {
+                    if (null != mListener) {
+                        mListener.onAdLeftApplication();
+                    }
+                }
             }
         });
 

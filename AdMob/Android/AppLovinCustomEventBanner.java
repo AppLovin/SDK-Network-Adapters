@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.applovin.adview.AppLovinAdView;
+import com.applovin.adview.AppLovinAdViewEventListener;
 import com.applovin.sdk.AppLovinAd;
 import com.applovin.sdk.AppLovinAdClickListener;
 import com.applovin.sdk.AppLovinAdDisplayListener;
@@ -20,6 +21,9 @@ import com.google.android.gms.ads.mediation.customevent.CustomEventBanner;
 import com.google.android.gms.ads.mediation.customevent.CustomEventBannerListener;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
 import static android.util.Log.DEBUG;
 import static android.util.Log.ERROR;
@@ -103,6 +107,13 @@ public class AppLovinCustomEventBanner
                     customEventBannerListener.onAdLeftApplication();
                 }
             } );
+
+            // As of Android SDK >= 7.3.0, we added a listener for banner events
+            if ( AppLovinSdk.VERSION_CODE >= 730 )
+            {
+                adView.setAdViewEventListener( (AppLovinAdViewEventListener) AppLovinAdViewEventListenerProxy.newInstance( customEventBannerListener ) );
+            }
+
             adView.loadNextAd();
         }
         else
@@ -194,6 +205,51 @@ public class AppLovinCustomEventBanner
         else
         {
             return AdRequest.ERROR_CODE_INTERNAL_ERROR;
+        }
+    }
+
+    /**
+     * Dynamic proxy class for AppLovin's AppLovinAdViewEventListener. Used to keep compilation compatibility if publisher is on a version of the SDK before the listener was introduced (< 7.3.0).
+     */
+    private static final class AppLovinAdViewEventListenerProxy
+            implements InvocationHandler
+    {
+        private final CustomEventBannerListener customEventBannerListener;
+
+        private static Object newInstance(final CustomEventBannerListener customEventBannerListener)
+        {
+            return Proxy.newProxyInstance( AppLovinAdViewEventListener.class.getClassLoader(),
+                                           new Class[] { AppLovinAdViewEventListener.class },
+                                           new AppLovinAdViewEventListenerProxy( customEventBannerListener ) );
+        }
+
+        private AppLovinAdViewEventListenerProxy(final CustomEventBannerListener customEventBannerListener)
+        {
+            this.customEventBannerListener = customEventBannerListener;
+        }
+
+        public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable
+        {
+            final String methodName = method.getName();
+
+            if ( "adOpenedFullscreen".equals( methodName ) )
+            {
+                log( DEBUG, "Banner opened fullscreen" );
+                customEventBannerListener.onAdOpened();
+            }
+            else if ( "adClosedFullscreen".equals( methodName ) )
+            {
+                log( DEBUG, "Banner closed fullscreen" );
+                customEventBannerListener.onAdClosed();
+            }
+            else if ( "adLeftApplication".equals( methodName ) )
+            {
+                // We will fire onLeaveApplication() in the adClicked() callback
+                log( DEBUG, "Banner left application" );
+            }
+            else if ( "adFailedToDisplay".equals( methodName ) ) {}
+
+            return null;
         }
     }
 }

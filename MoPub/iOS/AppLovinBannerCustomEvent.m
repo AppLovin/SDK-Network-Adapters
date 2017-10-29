@@ -30,7 +30,7 @@
 static const BOOL kALLoggingEnabled = YES;
 static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediation.mopub.errorDomain";
 
-// A global AdView to be shared by instances of the custom event. This prevents redundant re-creation.
+// A global AdView to be shared by instances of the custom event.
 static ALAdView *ALGlobalAdView;
 
 #pragma mark - MPBannerCustomEvent Overridden Methods

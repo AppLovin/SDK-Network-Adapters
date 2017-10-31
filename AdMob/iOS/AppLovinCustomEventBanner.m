@@ -48,7 +48,7 @@ static ALAdView *ALGlobalAdView;
         if ( !ALGlobalAdView )
         {
             ALGlobalAdView = [[ALAdView alloc] initWithFrame: CGRectMake(0.0f, 0.0f, size.width, size.height)
-                                                        size: adSize
+                                                        size: appLovinAdSize
                                                          sdk: [ALSdk shared]];
         }
         

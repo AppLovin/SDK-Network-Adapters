@@ -43,10 +43,9 @@ static ALAdView *ALGlobalAdView;
     {
         [[ALSdk shared] setPluginVersion: @"AdMob-2.3"];
         
-        CGSize size = CGSizeFromGADAdSize(adSize);
-        
         if ( !ALGlobalAdView )
         {
+            CGSize size = CGSizeFromGADAdSize(adSize);
             ALGlobalAdView = [[ALAdView alloc] initWithFrame: CGRectMake(0.0f, 0.0f, size.width, size.height)
                                                         size: appLovinAdSize
                                                          sdk: [ALSdk shared]];

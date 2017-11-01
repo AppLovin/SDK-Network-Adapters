@@ -14,6 +14,8 @@
     #import "ALAdView.h"
 #endif
 
+#define AD_VIEW_EVENT_DELEGATE_AVAILABLE [self.adView respondsToSelector: @selector(adEventDelegate)]
+
 /**
  * The receiver object of the ALAdView's delegates. This is used to prevent a retain cycle between the ALAdView and AppLovinBannerCustomEvent.
  */
@@ -52,8 +54,8 @@ static NSString *const kALAdMobMediationErrorDomain = @"com.applovin.sdk.mediati
         self.adView.adLoadDelegate = delegate;
         self.adView.adDisplayDelegate = delegate;
         
-        // As of iOS SDK >= 4.3.0, we added a delegate for banner events
-        if ( [self.adView respondsToSelector: @selector(setAdEventDelegate:)] )
+        // As of AppLovin iOS SDK >= 4.3.0, we added a delegate for banner events
+        if ( AD_VIEW_EVENT_DELEGATE_AVAILABLE )
         {
             self.adView.adEventDelegate = delegate;
         }

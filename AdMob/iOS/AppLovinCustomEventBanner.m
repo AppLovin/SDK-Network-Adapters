@@ -14,7 +14,7 @@
     #import "ALAdView.h"
 #endif
 
-#define AD_VIEW_EVENT_DELEGATE_AVAILABLE [self.adView respondsToSelector: @selector(adEventDelegate)]
+#define AD_VIEW_EVENT_DELEGATE_AVAILABLE [[ALSdk version] compare: @"4.3.0" options: NSNumericSearch] != NSOrderedAscending
 
 /**
  * The receiver object of the ALAdView's delegates. This is used to prevent a retain cycle between the ALAdView and AppLovinBannerCustomEvent.

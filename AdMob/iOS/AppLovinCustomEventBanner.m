@@ -22,15 +22,14 @@
 - (instancetype)initWithCustomEvent:(AppLovinCustomEventBanner *)parentCustomEvent;
 @end
 
-@interface AppLovinCustomEventBanner()
-@property (nonatomic, strong) ALAdView *adView;
-@end
-
 @implementation AppLovinCustomEventBanner
 @synthesize delegate;
 
 static const BOOL kALLoggingEnabled = YES;
 static NSString *const kALAdMobMediationErrorDomain = @"com.applovin.sdk.mediation.admob.errorDomain";
+
+// A global AdView to be shared by instances of the custom event.
+static ALAdView *ALGlobalAdView;
 
 #pragma mark - GADCustomEventBanner Protocol
 
@@ -44,15 +43,19 @@ static NSString *const kALAdMobMediationErrorDomain = @"com.applovin.sdk.mediati
     {
         [[ALSdk shared] setPluginVersion: @"AdMob-2.3"];
         
-        CGSize size = CGSizeFromGADAdSize(adSize);
-        
-        self.adView = [[ALAdView alloc] initWithFrame: CGRectMake(0.0f, 0.0f, size.width, size.height) size: appLovinAdSize sdk: [ALSdk shared]];
+        if ( !ALGlobalAdView )
+        {
+            CGSize size = CGSizeFromGADAdSize(adSize);
+            ALGlobalAdView = [[ALAdView alloc] initWithFrame: CGRectMake(0.0f, 0.0f, size.width, size.height)
+                                                        size: appLovinAdSize
+                                                         sdk: [ALSdk shared]];
+        }
         
         AppLovinAdMobBannerDelegate *delegate = [[AppLovinAdMobBannerDelegate alloc] initWithCustomEvent: self];
-        self.adView.adLoadDelegate = delegate;
-        self.adView.adDisplayDelegate = delegate;
+        ALGlobalAdView.adLoadDelegate = delegate;
+        ALGlobalAdView.adDisplayDelegate = delegate;
         
-        [self.adView loadNextAd];
+        [ALGlobalAdView loadNextAd];
     }
     else
     {
@@ -166,7 +169,7 @@ static NSString *const kALAdMobMediationErrorDomain = @"com.applovin.sdk.mediati
 - (void)adService:(ALAdService *)adService didLoadAd:(ALAd *)ad
 {
     [self.parentCustomEvent log: @"Banner did load ad: %@", ad.adIdNumber];
-    [self.parentCustomEvent.delegate customEventBanner: self.parentCustomEvent didReceiveAd: self.parentCustomEvent.adView];
+    [self.parentCustomEvent.delegate customEventBanner: self.parentCustomEvent didReceiveAd: ALGlobalAdView];
 }
 
 - (void)adService:(ALAdService *)adService didFailToLoadAdWithError:(int)code

@@ -24,6 +24,7 @@ import com.google.android.gms.ads.reward.mediation.MediationRewardedVideoAdAdapt
 import com.google.android.gms.ads.reward.mediation.MediationRewardedVideoAdListener;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
 
 import static android.util.Log.DEBUG;
@@ -40,7 +41,13 @@ public class ApplovinAdapter
         AppLovinAdLoadListener, AppLovinAdDisplayListener, AppLovinAdClickListener, AppLovinAdVideoPlaybackListener, AppLovinAdRewardListener
 {
     private static final boolean LOGGING_ENABLED = true;
-    private static final Handler uiHandler       = new Handler( Looper.getMainLooper() );
+    private static final Handler UI_HANDLER      = new Handler( Looper.getMainLooper() );
+    private static final String  DEFAULT_ZONE    = "";
+
+    // A map of Zone -> `AppLovinIncentivizedInterstitial` to be shared by instances of the custom event.
+    // This prevents skipping of ads as this adapter will be re-created and preloaded (along with underlying `AppLovinIncentivizedInterstitial`)
+    // on every ad load regardless if ad was actually displayed or not.
+    private static final Map<String, AppLovinIncentivizedInterstitial> GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS = new HashMap<String, AppLovinIncentivizedInterstitial>();
 
     private boolean initialized;
 
@@ -78,8 +85,6 @@ public class ApplovinAdapter
             AppLovinSdk.getInstance( context ).setPluginVersion( "AdMob-2.0" );
 
             initialized = true;
-
-            incentivizedInterstitial = AppLovinIncentivizedInterstitial.create( context );
         }
 
         listener.onInitializationSucceeded( this );
@@ -96,14 +101,39 @@ public class ApplovinAdapter
     {
         log( DEBUG, "Requesting AppLovin rewarded video with networkExtras: " + networkExtras );
 
-        if ( incentivizedInterstitial.isAdReadyToDisplay() )
+        // Zones support is available on AppLovin SDK 7.5.0 and higher
+        final String zoneId;
+        if ( AppLovinSdk.VERSION_CODE >= 750 && networkExtras != null && networkExtras.containsKey( "zone_id" ) )
         {
-            listener.onAdLoaded( this );
+            zoneId = networkExtras.getString( "zone_id" );
         }
         else
         {
-            incentivizedInterstitial.preload( this );
+            zoneId = DEFAULT_ZONE;
         }
+
+        // Check if incentivized ad for zone already exists
+        if ( GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS.containsKey( zoneId ) )
+        {
+            incentivizedInterstitial = GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS.get( zoneId );
+        }
+        else
+        {
+            // If this is a default Zone, create the incentivized ad normally
+            if ( DEFAULT_ZONE.equals( zoneId ) )
+            {
+                incentivizedInterstitial = AppLovinIncentivizedInterstitial.create( this.context );
+            }
+            // Otherwise, use the Zones API
+            else
+            {
+                incentivizedInterstitial = createIncentivizedInterstitialForZoneId( zoneId, AppLovinSdk.getInstance( this.context ) );
+            }
+
+            GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS.put( zoneId, incentivizedInterstitial );
+        }
+
+        incentivizedInterstitial.preload( this );
     }
 
     @Override
@@ -200,6 +230,8 @@ public class ApplovinAdapter
                 listener.onAdFailedToLoad( ApplovinAdapter.this, toAdMobErrorCode( errorCode ) );
             }
         } );
+
+        // TODO: Add support for backfilling on regular ad request if invalid zone entered
     }
 
     //
@@ -299,6 +331,27 @@ public class ApplovinAdapter
     }
 
     //
+    // Dynamically create an instance of AppLovinIncentivizedInterstitial with a given zone without breaking backwards compatibility for publishers on older SDKs.
+    //
+    private AppLovinIncentivizedInterstitial createIncentivizedInterstitialForZoneId(final String zoneId, final AppLovinSdk sdk)
+    {
+        AppLovinIncentivizedInterstitial incent = null;
+
+        try
+        {
+            final Method method = AppLovinIncentivizedInterstitial.class.getMethod( "create", String.class, AppLovinSdk.class );
+            incent = (AppLovinIncentivizedInterstitial) method.invoke( null, zoneId, sdk );
+        }
+        catch ( Throwable th )
+        {
+            log( ERROR, "Unable to load ad for zone: " + zoneId + "..." );
+            listener.onAdFailedToLoad( this, AdRequest.ERROR_CODE_INVALID_REQUEST );
+        }
+
+        return incent;
+    }
+
+    //
     // Utility Methods
     //
 
@@ -365,7 +418,7 @@ public class ApplovinAdapter
         }
         else
         {
-            uiHandler.post( runnable );
+            UI_HANDLER.post( runnable );
         }
     }
 }

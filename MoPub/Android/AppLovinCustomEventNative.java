@@ -56,7 +56,7 @@ public class AppLovinCustomEventNative
         this.nativeListener = customEventNativeListener;
 
         final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
-        sdk.setPluginVersion( "MoPub-2.0" );
+        sdk.setPluginVersion( "MoPub-2.1.0" );
         sdk.getNativeAdService().loadNativeAds( 1, this );
     }
 
@@ -159,7 +159,7 @@ public class AppLovinCustomEventNative
             parentView.findViewById( R.id.ID_OF_SUBVIEW ).setOnClickListener( onClickListener );
             */
 
-            // As of AppLovin SDK >= 7.1.0, impression tracking convenience methods have been added to AppLovinNativeAd
+            // As of AppLovin SDK >=7.1.0, impression tracking convenience methods have been added to AppLovinNativeAd
             parentNativeAd.trackImpression( new AppLovinPostbackListener()
             {
                 @Override

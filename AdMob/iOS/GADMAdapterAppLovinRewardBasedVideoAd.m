@@ -16,6 +16,10 @@
     #import "ALIncentivizedInterstitialAd.h"
 #endif
 
+// Convenience macro for checking if AppLovin SDK has support for zones
+#define HAS_ZONES_SUPPORT [[ALSdk shared].adService respondsToSelector: @selector(loadNextAdForZoneIdentifier:andNotify:)]
+#define DEFAULT_ZONE @""
+
 @interface GADMAdapterAppLovinRewardBasedVideoAd() <ALAdLoadDelegate, ALAdDisplayDelegate, ALAdVideoPlaybackDelegate, ALAdRewardDelegate>
 
 @property (nonatomic, strong) ALIncentivizedInterstitialAd *incent;
@@ -31,7 +35,21 @@
 
 static const BOOL kALLoggingEnabled = YES;
 static NSString *const kALAdMobMediationErrorDomain = @"com.applovin.sdk.mediation.admob.errorDomain";
-static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
+static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3.1";
+
+// A dictionary of Zone -> `ALIncentivizedInterstitialAd` to be shared by instances of the custom event.
+// This prevents skipping of ads as this adapter will be re-created and preloaded (along with underlying `ALIncentivizedInterstitialAd`)
+// on every ad load regardless if ad was actually displayed or not.
+static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobalIncentivizedInterstitialAds;
+
+#pragma mark - Class Initialization
+
++ (void)initialize
+{
+    [super initialize];
+    
+    ALGlobalIncentivizedInterstitialAds = [NSMutableDictionary dictionary];
+}
 
 #pragma mark - GADMRewardBasedVideoAdNetworkAdapter Protocol
 
@@ -42,7 +60,7 @@ static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
 
 + (Class<GADAdNetworkExtras>)networkExtrasClass
 {
-    return nil;
+    return [AppLovinAdNetworkExtras class];
 }
 
 - (instancetype)initWithRewardBasedVideoAdNetworkConnector:(id<GADMRewardBasedVideoAdNetworkConnector>)connector
@@ -70,14 +88,35 @@ static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
     NSString *adapterVersion = [[self class] adapterVersion];
     [[ALSdk shared] setPluginVersion: adapterVersion];
     
-    if ( self.incent.readyForDisplay )
+    // Zones support is available on AppLovin SDK 4.5.0 and higher
+    AppLovinAdNetworkExtras *extras = (AppLovinAdNetworkExtras *)self.connector.networkExtras;
+    NSString *zoneIdentifier = (extras.zoneIdentifier && HAS_ZONES_SUPPORT) ? extras.zoneIdentifier : DEFAULT_ZONE;
+    
+    // Check if incentivized ad for zone already exists
+    if ( ALGlobalIncentivizedInterstitialAds[zoneIdentifier] )
     {
-        [self.connector adapterDidReceiveRewardBasedVideoAd: self];
+        self.incent = ALGlobalIncentivizedInterstitialAds[zoneIdentifier];
     }
     else
     {
-        [self.incent preloadAndNotify: self];
+        // If this is a default Zone, create the incentivized ad normally
+        if ( [DEFAULT_ZONE isEqualToString: zoneIdentifier] )
+        {
+            self.incent = [[ALIncentivizedInterstitialAd alloc] initWithSdk: [ALSdk shared]];
+        }
+        // Otherwise, use the Zones API
+        else
+        {
+            self.incent = [self incentivizedInterstitialAdWithZoneIdentifier: zoneIdentifier];
+        }
+        
+        ALGlobalIncentivizedInterstitialAds[zoneIdentifier] = self.incent;
     }
+    
+    self.incent.adVideoPlaybackDelegate = self;
+    self.incent.adDisplayDelegate = self;
+    
+    [self.incent preloadAndNotify: self];
 }
 
 - (void)presentRewardBasedVideoAdWithRootViewController:(UIViewController *)viewController
@@ -122,6 +161,8 @@ static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
                                          code: [self toAdMobErrorCode: code]
                                      userInfo: @{NSLocalizedFailureReasonErrorKey : @"Adaptor requested to display a rewarded video before one was loaded"}];
     [self.connector adapter: self didFailToLoadRewardBasedVideoAdwithError: error];
+    
+    // TODO: Add support for backfilling on regular ad request if invalid zone entered
 }
 
 #pragma mark - Ad Display Delegate
@@ -203,16 +244,23 @@ static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
 
 #pragma mark - Incentivized Interstitial
 
-- (ALIncentivizedInterstitialAd *)incent
+/**
+ * Dynamically create an instance of ALAdView with a given zone without breaking backwards compatibility for publishers on older SDKs.
+ */
+- (ALIncentivizedInterstitialAd *)incentivizedInterstitialAdWithZoneIdentifier:(NSString *)zoneIdentifier
 {
-    if ( !_incent )
-    {
-        _incent = [[ALIncentivizedInterstitialAd alloc] initWithSdk: [ALSdk shared]];
-        _incent.adVideoPlaybackDelegate = self;
-        _incent.adDisplayDelegate = self;
-    }
+    // Prematurely create instance of ALAdView to store initialized one in later
+    ALIncentivizedInterstitialAd *incent = [ALIncentivizedInterstitialAd alloc];
     
-    return _incent;
+    // We must use NSInvocation over performSelector: for initializers
+    NSMethodSignature *methodSignature = [ALIncentivizedInterstitialAd instanceMethodSignatureForSelector: @selector(initWithZoneIdentifier:)];
+    NSInvocation *inv = [NSInvocation invocationWithMethodSignature: methodSignature];
+    [inv setSelector: @selector(initWithZoneIdentifier:)];
+    [inv setArgument: &zoneIdentifier atIndex: 2];
+    [inv setReturnValue: &incent];
+    [inv invokeWithTarget: incent];
+    
+    return incent;
 }
 
 #pragma mark - Utility Methods
@@ -253,5 +301,9 @@ static NSString *const kALAdMobAdapterVersion = @"AdMob-2.3";
         return kGADErrorInternalError;
     }
 }
+
+@end
+
+@implementation AppLovinAdNetworkExtras
 
 @end

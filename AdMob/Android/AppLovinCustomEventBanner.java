@@ -39,6 +39,9 @@ public class AppLovinCustomEventBanner
 {
     private static final boolean LOGGING_ENABLED = true;
 
+    private static final int BANNER_STANDARD_HEIGHT         = 50;
+    private static final int BANNER_HEIGHT_OFFSET_TOLERANCE = 10;
+
     private AppLovinAdView adView;
 
     //
@@ -46,7 +49,7 @@ public class AppLovinCustomEventBanner
     //
 
     @Override
-    public void requestBannerAd(final Context context, final CustomEventBannerListener customEventBannerListener, final String s, final AdSize adSize, final MediationAdRequest mediationAdRequest, final Bundle bundle)
+    public void requestBannerAd(final Context context, final CustomEventBannerListener customEventBannerListener, final String serverParameter, final AdSize adSize, final MediationAdRequest mediationAdRequest, final Bundle customEventExtras)
     {
         // SDK versions BELOW 7.1.0 require a instance of an Activity to be passed in as the context
         if ( AppLovinSdk.VERSION_CODE < 710 && !( context instanceof Activity ) )
@@ -65,7 +68,7 @@ public class AppLovinCustomEventBanner
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
             sdk.setPluginVersion( "AdMob-2.1" );
 
-            adView = createAdView( appLovinAdSize, context, customEventBannerListener );
+            adView = createAdView( appLovinAdSize, customEventExtras, context, customEventBannerListener );
             adView.setAdLoadListener( new AppLovinAdLoadListener()
             {
                 @Override
@@ -145,7 +148,7 @@ public class AppLovinCustomEventBanner
     // Utility Methods
     //
 
-    private AppLovinAdView createAdView(final AppLovinAdSize size, final Context parentContext, final CustomEventBannerListener customEventBannerListener)
+    private AppLovinAdView createAdView(final AppLovinAdSize size, final Bundle customEventExtras, final Context parentContext, final CustomEventBannerListener customEventBannerListener)
     {
         AppLovinAdView adView = null;
 
@@ -153,13 +156,24 @@ public class AppLovinCustomEventBanner
         {
             // AppLovin SDK < 7.1.0 uses an Activity, as opposed to Context in >= 7.1.0
             final Class<?> contextClass = ( AppLovinSdk.VERSION_CODE < 710 ) ? Activity.class : Context.class;
-            final Constructor<?> constructor = AppLovinAdView.class.getConstructor( AppLovinAdSize.class, contextClass );
 
-            adView = (AppLovinAdView) constructor.newInstance( size, parentContext );
+            // Zones support is available on AppLovin SDK 7.5.0 and higher
+            final Constructor<?> constructor;
+            if ( AppLovinSdk.VERSION_CODE >= 750 && customEventExtras != null && customEventExtras.containsKey( "zone_id" ) )
+            {
+                // Dynamically create an instance of AppLovinAdView with a given zone without breaking backwards compatibility for publishers on older SDKs.
+                constructor = AppLovinAdView.class.getConstructor( AppLovinAdSize.class, String.class, contextClass );
+                adView = (AppLovinAdView) constructor.newInstance( size, customEventExtras.getString( "zone_id" ), parentContext );
+            }
+            else
+            {
+                constructor = AppLovinAdView.class.getConstructor( AppLovinAdSize.class, contextClass );
+                adView = (AppLovinAdView) constructor.newInstance( size, parentContext );
+            }
         }
         catch ( Throwable th )
         {
-            log( ERROR, "Unable to get create AppLovinAdView." );
+            log( ERROR, "Unable to create AppLovinAdView." );
             customEventBannerListener.onAdFailedToLoad( AdRequest.ERROR_CODE_INTERNAL_ERROR );
         }
 
@@ -168,7 +182,9 @@ public class AppLovinCustomEventBanner
 
     private AppLovinAdSize appLovinAdSizeFromAdMobAdSize(final AdSize adSize)
     {
-        if ( AdSize.BANNER.equals( adSize ) || AdSize.LARGE_BANNER.equals( adSize ) )
+        final boolean isSmartBanner = ( adSize.getWidth() == AdSize.FULL_WIDTH ) && ( adSize.getHeight() == AdSize.AUTO_HEIGHT );
+
+        if ( AdSize.BANNER.equals( adSize ) || AdSize.LARGE_BANNER.equals( adSize ) || isSmartBanner )
         {
             return AppLovinAdSize.BANNER;
         }
@@ -179,6 +195,16 @@ public class AppLovinCustomEventBanner
         else if ( AdSize.LEADERBOARD.equals( adSize ) )
         {
             return AppLovinAdSize.LEADER;
+        }
+        // This is not a one of AdMob's predefined size
+        else
+        {
+            // Assume fluid width, and check for height with offset tolerance
+            final int offset = Math.abs( BANNER_STANDARD_HEIGHT - adSize.getHeight() );
+            if ( offset <= BANNER_HEIGHT_OFFSET_TOLERANCE )
+            {
+                return AppLovinAdSize.BANNER;
+            }
         }
 
         return null;

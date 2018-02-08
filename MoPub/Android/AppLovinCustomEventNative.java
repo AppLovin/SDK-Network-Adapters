@@ -4,7 +4,6 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
-import android.util.Log;
 import android.view.View;
 
 import com.applovin.nativeAds.AppLovinNativeAd;
@@ -12,6 +11,7 @@ import com.applovin.nativeAds.AppLovinNativeAdLoadListener;
 import com.applovin.sdk.AppLovinErrorCodes;
 import com.applovin.sdk.AppLovinPostbackListener;
 import com.applovin.sdk.AppLovinSdk;
+import com.mopub.common.logging.MoPubLog;
 import com.mopub.nativeads.CustomEventNative;
 import com.mopub.nativeads.NativeErrorCode;
 import com.mopub.nativeads.NativeImageHelper;
@@ -37,8 +37,7 @@ public class AppLovinCustomEventNative
         extends CustomEventNative
         implements AppLovinNativeAdLoadListener
 {
-    private static final boolean LOGGING_ENABLED = true;
-    private static final Handler uiHandler       = new Handler( Looper.getMainLooper() );
+    private static final Handler uiHandler = new Handler( Looper.getMainLooper() );
 
     private CustomEventNativeListener nativeListener;
     private Context                   context;
@@ -196,9 +195,13 @@ public class AppLovinCustomEventNative
 
     private static void log(final int priority, final String message)
     {
-        if ( LOGGING_ENABLED )
+        if ( priority == DEBUG )
         {
-            Log.println( priority, "AppLovinNative", message );
+            MoPubLog.d( "AppLovinNative: " + message );
+        }
+        else
+        {
+            MoPubLog.e( "AppLovinNative: " + message );
         }
     }
 
@@ -210,7 +213,7 @@ public class AppLovinCustomEventNative
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.UNSPECIFIED_ERROR )
         {
-            return NativeErrorCode.NETWORK_INVALID_STATE;
+            return NativeErrorCode.UNSPECIFIED;
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.NO_NETWORK )
         {

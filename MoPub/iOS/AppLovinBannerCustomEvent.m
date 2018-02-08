@@ -10,6 +10,7 @@
 #import "AppLovinBannerCustomEvent.h"
 #import "MPConstants.h"
 #import "MPError.h"
+#import "MPLogging.h"
 
 #if __has_include(<AppLovinSDK/AppLovinSDK.h>)
     #import <AppLovinSDK/AppLovinSDK.h>
@@ -34,8 +35,6 @@
 @end
 
 @implementation AppLovinBannerCustomEvent
-
-static const BOOL kALLoggingEnabled = YES;
 static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediation.mopub.errorDomain";
 
 static const CGFloat kALBannerHeightOffsetTolerance = 10.0f;
@@ -168,15 +167,12 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
 
 - (void)log:(NSString *)format, ...
 {
-    if ( kALLoggingEnabled )
-    {
-        va_list valist;
-        va_start(valist, format);
-        NSString *message = [[NSString alloc] initWithFormat: format arguments: valist];
-        va_end(valist);
-        
-        NSLog(@"AppLovinBannerCustomEvent: %@", message);
-    }
+    va_list valist;
+    va_start(valist, format);
+    NSString *message = [[NSString alloc] initWithFormat: format arguments: valist];
+    va_end(valist);
+    
+    MPLogDebug(@"AppLovinBannerCustomEvent : %@", message);
 }
 
 - (MOPUBErrorCode)toMoPubErrorCode:(int)appLovinErrorCode
@@ -231,8 +227,6 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
                                          code: [self.parentCustomEvent toMoPubErrorCode: code]
                                      userInfo: nil];
     [self.parentCustomEvent.delegate bannerCustomEvent: self.parentCustomEvent didFailToLoadAdWithError: error];
-    
-    // TODO: Add support for backfilling on regular ad request if invalid zone entered
 }
 
 #pragma mark - Ad Display Delegate
@@ -287,6 +281,11 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
 - (void)ad:(ALAd *)ad didFailToDisplayInAdView:(ALAdView *)adView withError:(ALAdViewDisplayErrorCode)code
 {
     [self.parentCustomEvent log: @"Banner failed to display: %ld", code];
+    
+    NSError *error = [NSError errorWithDomain: kALMoPubMediationErrorDomain
+                                         code: [self.parentCustomEvent toMoPubErrorCode: code]
+                                     userInfo: @{NSLocalizedFailureReasonErrorKey : @"Adaptor failed to display banner"}];
+    [self.parentCustomEvent.delegate bannerCustomEvent: self.parentCustomEvent didFailToLoadAdWithError: error];
 }
 
 @end

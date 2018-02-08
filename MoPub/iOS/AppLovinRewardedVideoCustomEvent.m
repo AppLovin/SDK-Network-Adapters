@@ -9,6 +9,7 @@
 #import "AppLovinRewardedVideoCustomEvent.h"
 #import "MPRewardedVideoReward.h"
 #import "MPError.h"
+#import "MPLogging.h"
 
 #if __has_include(<AppLovinSDK/AppLovinSDK.h>)
     #import <AppLovinSDK/AppLovinSDK.h>
@@ -34,8 +35,6 @@
 @end
 
 @implementation AppLovinRewardedVideoCustomEvent
-
-static const BOOL kALLoggingEnabled = YES;
 static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediation.mopub.errorDomain";
 
 // A dictionary of Zone -> `ALIncentivizedInterstitialAd` to be shared by instances of the custom event.
@@ -124,9 +123,6 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
     }
 }
 
-- (void)handleCustomEventInvalidated { }
-- (void)handleAdPlayedForCustomEventNetwork { }
-
 #pragma mark - Ad Load Delegate
 
 - (void)adService:(ALAdService *)adService didLoadAd:(ALAd *)ad
@@ -143,8 +139,6 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
                                          code: [self toMoPubErrorCode: code]
                                      userInfo: nil];
     [self.delegate rewardedVideoDidFailToLoadAdForCustomEvent: self error: error];
-    
-    // TODO: Add support for backfilling on regular ad request if invalid zone entered
 }
 
 #pragma mark - Ad Display Delegate
@@ -254,15 +248,12 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
 
 - (void)log:(NSString *)format, ...
 {
-    if ( kALLoggingEnabled )
-    {
-        va_list valist;
-        va_start(valist, format);
-        NSString *message = [[NSString alloc] initWithFormat: format arguments: valist];
-        va_end(valist);
-        
-        NSLog(@"AppLovinRewardedVideoCustomEvent: %@", message);
-    }
+    va_list valist;
+    va_start(valist, format);
+    NSString *message = [[NSString alloc] initWithFormat: format arguments: valist];
+    va_end(valist);
+    
+    MPLogDebug(@"AppLovinRewardedVideoCustomEvent: %@", message);
 }
 
 - (MOPUBErrorCode)toMoPubErrorCode:(int)appLovinErrorCode

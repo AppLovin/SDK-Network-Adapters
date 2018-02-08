@@ -13,6 +13,7 @@ import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinErrorCodes;
 import com.applovin.sdk.AppLovinSdk;
+import com.mopub.common.logging.MoPubLog;
 import com.mopub.mobileads.CustomEventBanner;
 import com.mopub.mobileads.MoPubErrorCode;
 
@@ -37,8 +38,6 @@ import static android.util.Log.ERROR;
 public class AppLovinCustomEventBanner
         extends CustomEventBanner
 {
-    private static final boolean LOGGING_ENABLED = true;
-
     private static final int BANNER_STANDARD_HEIGHT         = 50;
     private static final int BANNER_HEIGHT_OFFSET_TOLERANCE = 10;
 
@@ -85,8 +84,6 @@ public class AppLovinCustomEventBanner
                 {
                     log( ERROR, "Failed to load banner ad with code: " + errorCode );
                     customEventBannerListener.onBannerFailed( toMoPubErrorCode( errorCode ) );
-
-                    // TODO: Add support for backfilling on regular ad request if invalid zone entered
                 }
             } );
             adView.setAdDisplayListener( new AppLovinAdDisplayListener()
@@ -229,9 +226,13 @@ public class AppLovinCustomEventBanner
 
     private static void log(final int priority, final String message, final Throwable th)
     {
-        if ( LOGGING_ENABLED )
+        if ( priority == DEBUG )
         {
-            Log.println( priority, "AppLovinBanner", message + ( ( th == null ) ? "" : Log.getStackTraceString( th ) ) );
+            MoPubLog.d( "AppLovinBanner: " + message );
+        }
+        else
+        {
+            MoPubLog.e( "AppLovinBanner: " + message + ( ( th == null ) ? "" : Log.getStackTraceString( th ) ) );
         }
     }
 
@@ -243,7 +244,7 @@ public class AppLovinCustomEventBanner
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.UNSPECIFIED_ERROR )
         {
-            return MoPubErrorCode.NETWORK_INVALID_STATE;
+            return MoPubErrorCode.UNSPECIFIED;
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.NO_NETWORK )
         {

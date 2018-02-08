@@ -3,7 +3,6 @@ package YOUR_PACKAGE_NAME;
 import android.app.Activity;
 import android.content.Context;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.applovin.adview.AppLovinInterstitialAd;
 import com.applovin.adview.AppLovinInterstitialAdDialog;
@@ -15,6 +14,7 @@ import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinAdVideoPlaybackListener;
 import com.applovin.sdk.AppLovinErrorCodes;
 import com.applovin.sdk.AppLovinSdk;
+import com.mopub.common.logging.MoPubLog;
 import com.mopub.mobileads.CustomEventInterstitial;
 import com.mopub.mobileads.MoPubErrorCode;
 
@@ -159,8 +159,6 @@ public class AppLovinCustomEventInterstitial
     {
         log( ERROR, "Interstitial failed to load with error: " + errorCode );
         listener.onInterstitialFailed( toMoPubErrorCode( errorCode ) );
-
-        // TODO: Add support for backfilling on regular ad request if invalid zone entered
     }
 
     //
@@ -266,9 +264,13 @@ public class AppLovinCustomEventInterstitial
 
     private static void log(final int priority, final String message)
     {
-        if ( LOGGING_ENABLED )
+        if ( priority == DEBUG )
         {
-            Log.println( priority, "AppLovinInterstitial", message );
+            MoPubLog.d( "AppLovinInterstitial: " + message );
+        }
+        else
+        {
+            MoPubLog.e( "AppLovinInterstitial: " + message );
         }
     }
 
@@ -280,7 +282,7 @@ public class AppLovinCustomEventInterstitial
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.UNSPECIFIED_ERROR )
         {
-            return MoPubErrorCode.NETWORK_INVALID_STATE;
+            return MoPubErrorCode.UNSPECIFIED;
         }
         else if ( applovinErrorCode == AppLovinErrorCodes.NO_NETWORK )
         {

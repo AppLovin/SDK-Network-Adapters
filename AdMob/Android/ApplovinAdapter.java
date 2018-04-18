@@ -23,7 +23,6 @@ import com.google.android.gms.ads.reward.RewardItem;
 import com.google.android.gms.ads.reward.mediation.MediationRewardedVideoAdAdapter;
 import com.google.android.gms.ads.reward.mediation.MediationRewardedVideoAdListener;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -127,7 +126,7 @@ public class ApplovinAdapter
             // Otherwise, use the Zones API
             else
             {
-                incentivizedInterstitial = createIncentivizedInterstitialForZoneId( zoneId, AppLovinSdk.getInstance( this.context ) );
+                incentivizedInterstitial = AppLovinIncentivizedInterstitial.create( zoneId, AppLovinSdk.getInstance( this.context ) );
             }
 
             GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS.put( zoneId, incentivizedInterstitial );
@@ -144,33 +143,7 @@ public class ApplovinAdapter
             fullyWatched = false;
             reward = null;
 
-            try
-            {
-                // AppLovin SDK < 7.2.0 uses an Activity, as opposed to Context in >= 7.2.0
-                final Class<?> contextClass = ( AppLovinSdk.VERSION_CODE < 720 ) ? Activity.class : Context.class;
-                final Method showMethod = AppLovinIncentivizedInterstitial.class.getMethod( "show",
-                                                                                            contextClass,
-                                                                                            String.class,
-                                                                                            AppLovinAdRewardListener.class,
-                                                                                            AppLovinAdVideoPlaybackListener.class,
-                                                                                            AppLovinAdDisplayListener.class,
-                                                                                            AppLovinAdClickListener.class );
-
-                try
-                {
-                    showMethod.invoke( incentivizedInterstitial, context, null, this, this, this, this );
-                }
-                catch ( Throwable th )
-                {
-                    log( ERROR, "Unable to invoke show() method from AppLovinIncentivizedInterstitial." );
-                    listener.onAdFailedToLoad( this, AdRequest.ERROR_CODE_INTERNAL_ERROR );
-                }
-            }
-            catch ( Throwable th )
-            {
-                log( ERROR, "Unable to get show() method from AppLovinIncentivizedInterstitial." );
-                listener.onAdFailedToLoad( this, AdRequest.ERROR_CODE_INTERNAL_ERROR );
-            }
+            incentivizedInterstitial.show( context, null, this, this, this, this );
         }
         else
         {
@@ -326,27 +299,6 @@ public class ApplovinAdapter
         log( DEBUG, "Verified " + amount + " " + currency );
 
         reward = new AppLovinRewardItem( amount, currency );
-    }
-
-    //
-    // Dynamically create an instance of AppLovinIncentivizedInterstitial with a given zone without breaking backwards compatibility for publishers on older SDKs.
-    //
-    private AppLovinIncentivizedInterstitial createIncentivizedInterstitialForZoneId(final String zoneId, final AppLovinSdk sdk)
-    {
-        AppLovinIncentivizedInterstitial incent = null;
-
-        try
-        {
-            final Method method = AppLovinIncentivizedInterstitial.class.getMethod( "create", String.class, AppLovinSdk.class );
-            incent = (AppLovinIncentivizedInterstitial) method.invoke( null, zoneId, sdk );
-        }
-        catch ( Throwable th )
-        {
-            log( ERROR, "Unable to load ad for zone: " + zoneId + "..." );
-            listener.onAdFailedToLoad( this, AdRequest.ERROR_CODE_INVALID_REQUEST );
-        }
-
-        return incent;
     }
 
     //

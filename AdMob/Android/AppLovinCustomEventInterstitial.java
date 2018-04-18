@@ -22,7 +22,6 @@ import com.google.android.gms.ads.mediation.MediationAdRequest;
 import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitial;
 import com.google.android.gms.ads.mediation.customevent.CustomEventInterstitialListener;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -110,17 +109,7 @@ public class AppLovinCustomEventInterstitial
             // Otherwise, use the Zones API
             else
             {
-                // Dynamically load an ad for a given zone without breaking backwards compatibility for publishers on older SDKs
-                try
-                {
-                    final Method method = sdk.getAdService().getClass().getMethod( "loadNextAdForZoneId", String.class, AppLovinAdLoadListener.class );
-                    method.invoke( sdk.getAdService(), zoneId, this );
-                }
-                catch ( Throwable th )
-                {
-                    log( ERROR, "Unable to load ad for zone: " + zoneId + "..." );
-                    listener.onAdFailedToLoad( AdRequest.ERROR_CODE_INVALID_REQUEST );
-                }
+                sdk.getAdService().loadNextAdForZoneId( zoneId, this );
             }
         }
     }
@@ -133,7 +122,7 @@ public class AppLovinCustomEventInterstitial
         {
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
 
-            final AppLovinInterstitialAdDialog interstitialAd = createInterstitial( context, sdk );
+            final AppLovinInterstitialAdDialog interstitialAd = AppLovinInterstitialAd.create( sdk, context );
             interstitialAd.setAdDisplayListener( this );
             interstitialAd.setAdClickListener( this );
             interstitialAd.setAdVideoPlaybackListener( this );
@@ -269,27 +258,6 @@ public class AppLovinCustomEventInterstitial
 
             preloadedAds.offer( ad );
         }
-    }
-
-    private AppLovinInterstitialAdDialog createInterstitial(final Context context, final AppLovinSdk sdk)
-    {
-        AppLovinInterstitialAdDialog inter = null;
-
-        try
-        {
-            // AppLovin SDK < 7.2.0 uses an Activity, as opposed to Context in >= 7.2.0
-            final Class<?> contextClass = ( AppLovinSdk.VERSION_CODE < 720 ) ? Activity.class : Context.class;
-            final Method method = AppLovinInterstitialAd.class.getMethod( "create", AppLovinSdk.class, contextClass );
-
-            inter = (AppLovinInterstitialAdDialog) method.invoke( null, sdk, context );
-        }
-        catch ( Throwable th )
-        {
-            log( ERROR, "Unable to create AppLovinInterstitialAd." );
-            listener.onAdFailedToLoad( AdRequest.ERROR_CODE_INTERNAL_ERROR );
-        }
-
-        return inter;
     }
 
     private static void log(final int priority, final String message)

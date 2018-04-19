@@ -32,6 +32,7 @@ public class AppLovinCustomEventBanner
         implements CustomEventBanner
 {
     private static final boolean LOGGING_ENABLED = true;
+    private static final String  DEFAULT_ZONE    = "";
 
     private static final int BANNER_STANDARD_HEIGHT         = 50;
     private static final int BANNER_HEIGHT_OFFSET_TOLERANCE = 10;
@@ -62,7 +63,9 @@ public class AppLovinCustomEventBanner
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
             sdk.setPluginVersion( "AdMob-2.2.1" );
 
-            adView = new AppLovinAdView( appLovinAdSize, customEventExtras.getString( "zone_id" ), context );
+            final String zoneId = ( customEventExtras != null ) ? customEventExtras.getString( "zone_id" ) : DEFAULT_ZONE;
+
+            adView = new AppLovinAdView( appLovinAdSize, zoneId, context );
             adView.setAdLoadListener( new AppLovinAdLoadListener()
             {
                 @Override

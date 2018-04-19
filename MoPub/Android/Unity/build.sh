@@ -19,8 +19,6 @@
 #  Example Usage: ./build.sh {ANDROID_SDK_JAR} {ANDROID_ANNOTATIONS_JAR} {APPLOVIN_SDK_JAR} {MOPUB_BASE_SDK_JAR} {MOPUB_BANNER_SDK_JAR} {MOPUB_INTERSTITIAL_SDK_JAR} {MOPUB_REWARDED_SDK_JAR} {MOPUB_NATIVE_ADS_SDK_JAR}
 #
 
-# TODO: Automatically rename packages
-
 # Input parameters check
 if [ "$#" -lt 8 ]; then
     echo "Invalid number of parameters"

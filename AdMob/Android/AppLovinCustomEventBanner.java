@@ -63,7 +63,16 @@ public class AppLovinCustomEventBanner
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
             sdk.setPluginVersion( "AdMob-2.2.1" );
 
-            final String zoneId = ( customEventExtras != null ) ? customEventExtras.getString( "zone_id" ) : DEFAULT_ZONE;
+            // Zones support is available on AppLovin SDK 7.5.0 and higher
+            final String zoneId;
+            if ( AppLovinSdk.VERSION_CODE >= 750 && customEventExtras != null && customEventExtras.containsKey( "zone_id" ) )
+            {
+                zoneId = customEventExtras.getString( "zone_id" );
+            }
+            else
+            {
+                zoneId = DEFAULT_ZONE;
+            }
 
             adView = new AppLovinAdView( appLovinAdSize, zoneId, context );
             adView.setAdLoadListener( new AppLovinAdLoadListener()

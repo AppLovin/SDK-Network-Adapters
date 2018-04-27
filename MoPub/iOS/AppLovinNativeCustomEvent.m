@@ -69,16 +69,22 @@ static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediati
     
     [self precacheImagesWithURLs: imageURLs completionBlock:^(NSArray<NSError *> *errors)
      {
-         [[self class] log: @"Native ad done precaching"];
-         
-         AppLovinNativeAdapter *adapter = [[AppLovinNativeAdapter alloc] initWithNativeAd: nativeAd];
-         MPNativeAd *nativeAd = [[MPNativeAd alloc] initWithAdAdapter: adapter];
-         
-         dispatch_async(dispatch_get_main_queue(), ^{
+         if (errors.count > 0)
+         {
+             [[self class] log: @"Native ad failed to precache images."];
+             NSError *error = [NSError errorWithDomain: kALMoPubMediationErrorDomain
+                                                  code: MPNativeAdErrorImageDownloadFailed
+                                              userInfo: nil];
+             [self.delegate nativeCustomEvent: self didFailToLoadAdWithError: error];
+         }
+         else
+         {
+             [[self class] log: @"Native ad done precaching"];
+             AppLovinNativeAdapter *adapter = [[AppLovinNativeAdapter alloc] initWithNativeAd: nativeAd];
+             MPNativeAd *nativeAd = [[MPNativeAd alloc] initWithAdAdapter: adapter];
+             
              [self.delegate nativeCustomEvent: self didLoadAd: nativeAd];
-         });
-         
-         [adapter willAttachToView: nil];
+         }
      }];
 }
 

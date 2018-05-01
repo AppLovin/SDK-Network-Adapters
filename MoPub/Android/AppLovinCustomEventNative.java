@@ -47,10 +47,7 @@ public class AppLovinCustomEventNative
     private CustomEventNativeListener nativeListener;
     private Context                   context;
 
-    //
-    // MoPub Custom Event Methods
-    //
-
+    //region MoPub Custom Event Methods
     @Override
     public void loadNativeAd(final Context context, final CustomEventNativeListener customEventNativeListener, final Map<String, Object> localExtras, final Map<String, String> serverExtras)
     {
@@ -64,11 +61,9 @@ public class AppLovinCustomEventNative
 
         sdk.getNativeAdService().loadNativeAds( 1, this );
     }
+    //endregion
 
-    //
-    // Native Ad Load Listener
-    //
-
+    //region Native Ad Load Listener
     @Override
     public void onNativeAdsLoaded(final List nativeAds)
     {
@@ -173,6 +168,7 @@ public class AppLovinCustomEventNative
         public void handleClick(@NonNull final View view)
         {
             super.handleClick( view );
+
             parentNativeAd.launchClickTarget( view.getContext() );
             notifyAdClicked();
         }
@@ -189,11 +185,9 @@ public class AppLovinCustomEventNative
             AppLovinCustomEventNative.this.nativeListener = null;
         }
     }
+    //endregion
 
-    //
-    // Utility Methods
-    //
-
+    //region Utility Methods
     private static void log(final int priority, final String message)
     {
         if ( LOGGING_ENABLED )
@@ -264,4 +258,5 @@ public class AppLovinCustomEventNative
 
         return sdk;
     }
+    //endregion
 }

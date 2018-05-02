@@ -15,6 +15,7 @@ import com.applovin.sdk.AppLovinAdDisplayListener;
 import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinErrorCodes;
+import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkSettings;
 import com.mopub.mobileads.CustomEventBanner;
@@ -76,6 +77,7 @@ public class AppLovinCustomEventBanner
         {
             sdk = retrieveSdk( serverExtras, context );
             sdk.setPluginVersion( "MoPub-2.1.5" );
+            sdk.setMediationProvider( AppLovinMediationProvider.MOPUB );
 
             final AppLovinAdView adView = new AppLovinAdView( sdk, adSize, context );
             adView.setAdDisplayListener( new AppLovinAdDisplayListener()

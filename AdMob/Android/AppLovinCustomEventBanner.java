@@ -12,7 +12,6 @@ import com.applovin.sdk.AppLovinAdDisplayListener;
 import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinErrorCodes;
-import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinSdk;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
@@ -64,7 +63,6 @@ public class AppLovinCustomEventBanner
         {
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
             sdk.setPluginVersion( "AdMob-2.2.0" );
-            sdk.setMediationProvider( AppLovinMediationProvider.ADMOB );
 
             adView = createAdView( appLovinAdSize, customEventExtras, context, customEventBannerListener );
             adView.setAdLoadListener( new AppLovinAdLoadListener()

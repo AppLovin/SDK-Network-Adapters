@@ -15,7 +15,6 @@ import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdRewardListener;
 import com.applovin.sdk.AppLovinAdVideoPlaybackListener;
 import com.applovin.sdk.AppLovinErrorCodes;
-import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinSdk;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.mediation.MediationAdRequest;
@@ -83,9 +82,7 @@ public class ApplovinAdapter
         if ( !initialized )
         {
             AppLovinSdk.initializeSdk( context );
-            AppLovinSdk appLovinSdk = AppLovinSdk.getInstance( context );
-            appLovinSdk.setPluginVersion( "AdMob-2.2.0" );
-            appLovinSdk.setMediationProvider( AppLovinMediationProvider.ADMOB );
+            AppLovinSdk.getInstance( context ).setPluginVersion( "AdMob-2.2.0" );
 
             initialized = true;
         }

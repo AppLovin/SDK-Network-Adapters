@@ -77,7 +77,6 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
 {
     [[ALSdk shared] initializeSdk];
     [[ALSdk shared] setPluginVersion: kALAdMobAdapterVersion];
-    [ALSdk shared].mediationProvider = ALMediationProviderAdMob;
     
     [self.connector adapterDidSetUpRewardBasedVideoAd: self];
 }

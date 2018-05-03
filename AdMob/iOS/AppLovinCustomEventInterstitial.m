@@ -57,7 +57,6 @@ static NSObject *ALGlobalInterstitialAdsLock;
     [self log: @"Requesting AppLovin interstitial"];
     
     [[ALSdk shared] setPluginVersion: @"AdMob-2.3.1"];
-    [ALSdk shared].mediationProvider = ALMediationProviderAdMob;
     
     // Zones support is available on AppLovin SDK 4.5.0 and higher
     if ( HAS_ZONES_SUPPORT && request.additionalParameters[@"zone_id"] )

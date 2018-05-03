@@ -63,7 +63,6 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
     if ( appLovinAdSize )
     {
         [[ALSdk shared] setPluginVersion: @"AdMob-2.3.1"];
-        [ALSdk shared].mediationProvider = ALMediationProviderAdMob;
         
         CGSize size = CGSizeFromGADAdSize(adSize);
         

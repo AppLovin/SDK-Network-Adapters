@@ -16,7 +16,6 @@ import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinAdVideoPlaybackListener;
 import com.applovin.sdk.AppLovinErrorCodes;
-import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinSdk;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.mediation.MediationAdRequest;
@@ -83,7 +82,6 @@ public class AppLovinCustomEventInterstitial
 
         final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
         sdk.setPluginVersion( "AdMob-2.2.0" );
-        sdk.setMediationProvider( AppLovinMediationProvider.ADMOB );
 
         // Zones support is available on AppLovin SDK 7.5.0 and higher
         if ( AppLovinSdk.VERSION_CODE >= 750 && customEventExtras != null && customEventExtras.containsKey( "zone_id" ) )

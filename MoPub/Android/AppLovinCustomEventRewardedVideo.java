@@ -23,7 +23,6 @@ import com.mopub.mobileads.CustomEventRewardedVideo;
 import com.mopub.mobileads.MoPubErrorCode;
 import com.mopub.mobileads.MoPubRewardedVideoManager;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,7 +72,7 @@ public class AppLovinCustomEventRewardedVideo
         if ( !initialized )
         {
             sdk = retrieveSdk( serverExtras, activity );
-            sdk.setPluginVersion( "MoPub-2.1.5" );
+            sdk.setPluginVersion( "MoPub-2.1.6" );
 
             initialized = true;
 
@@ -117,7 +116,7 @@ public class AppLovinCustomEventRewardedVideo
             // Otherwise, use the Zones API
             else
             {
-                incentivizedInterstitial = createIncentivizedInterstitialForZoneId( zoneId, sdk );
+                incentivizedInterstitial = AppLovinIncentivizedInterstitial.create( zoneId, sdk );
             }
 
             GLOBAL_INCENTIVIZED_INTERSTITIAL_ADS.put( zoneId, incentivizedInterstitial );
@@ -300,27 +299,6 @@ public class AppLovinCustomEventRewardedVideo
         log( DEBUG, "Verified " + amount + " " + currency );
 
         reward = MoPubReward.success( currency, amount );
-    }
-
-    //
-    // Dynamically create an instance of AppLovinIncentivizedInterstitial with a given zone without breaking backwards compatibility for publishers on older SDKs.
-    //
-    private AppLovinIncentivizedInterstitial createIncentivizedInterstitialForZoneId(final String zoneId, final AppLovinSdk sdk)
-    {
-        AppLovinIncentivizedInterstitial incent = null;
-
-        try
-        {
-            final Method method = AppLovinIncentivizedInterstitial.class.getMethod( "create", String.class, AppLovinSdk.class );
-            incent = (AppLovinIncentivizedInterstitial) method.invoke( null, zoneId, sdk );
-        }
-        catch ( Throwable th )
-        {
-            log( ERROR, "Unable to load ad for zone: " + zoneId + "..." );
-            MoPubRewardedVideoManager.onRewardedVideoLoadFailure( getClass(), "", MoPubErrorCode.ADAPTER_CONFIGURATION_ERROR );
-        }
-
-        return incent;
     }
 
     //

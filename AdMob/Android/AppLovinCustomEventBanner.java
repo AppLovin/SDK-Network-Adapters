@@ -19,8 +19,6 @@ import com.google.android.gms.ads.mediation.MediationAdRequest;
 import com.google.android.gms.ads.mediation.customevent.CustomEventBanner;
 import com.google.android.gms.ads.mediation.customevent.CustomEventBannerListener;
 
-import java.lang.reflect.Constructor;
-
 import static android.util.Log.DEBUG;
 import static android.util.Log.ERROR;
 
@@ -34,6 +32,7 @@ public class AppLovinCustomEventBanner
         implements CustomEventBanner
 {
     private static final boolean LOGGING_ENABLED = true;
+    private static final String  DEFAULT_ZONE    = "";
 
     private static final int BANNER_STANDARD_HEIGHT         = 50;
     private static final int BANNER_HEIGHT_OFFSET_TOLERANCE = 10;
@@ -62,9 +61,20 @@ public class AppLovinCustomEventBanner
         if ( appLovinAdSize != null )
         {
             final AppLovinSdk sdk = AppLovinSdk.getInstance( context );
-            sdk.setPluginVersion( "AdMob-2.2.0" );
+            sdk.setPluginVersion( "AdMob-2.2.1" );
 
-            adView = createAdView( appLovinAdSize, customEventExtras, context, customEventBannerListener );
+            // Zones support is available on AppLovin SDK 7.5.0 and higher
+            final String zoneId;
+            if ( AppLovinSdk.VERSION_CODE >= 750 && customEventExtras != null && customEventExtras.containsKey( "zone_id" ) )
+            {
+                zoneId = customEventExtras.getString( "zone_id" );
+            }
+            else
+            {
+                zoneId = DEFAULT_ZONE;
+            }
+
+            adView = new AppLovinAdView( appLovinAdSize, zoneId, context );
             adView.setAdLoadListener( new AppLovinAdLoadListener()
             {
                 @Override
@@ -137,38 +147,6 @@ public class AppLovinCustomEventBanner
     //
     // Utility Methods
     //
-
-    private AppLovinAdView createAdView(final AppLovinAdSize size, final Bundle customEventExtras, final Context parentContext, final CustomEventBannerListener customEventBannerListener)
-    {
-        AppLovinAdView adView = null;
-
-        try
-        {
-            // AppLovin SDK < 7.1.0 uses an Activity, as opposed to Context in >= 7.1.0
-            final Class<?> contextClass = ( AppLovinSdk.VERSION_CODE < 710 ) ? Activity.class : Context.class;
-
-            // Zones support is available on AppLovin SDK 7.5.0 and higher
-            final Constructor<?> constructor;
-            if ( AppLovinSdk.VERSION_CODE >= 750 && customEventExtras != null && customEventExtras.containsKey( "zone_id" ) )
-            {
-                // Dynamically create an instance of AppLovinAdView with a given zone without breaking backwards compatibility for publishers on older SDKs.
-                constructor = AppLovinAdView.class.getConstructor( AppLovinAdSize.class, String.class, contextClass );
-                adView = (AppLovinAdView) constructor.newInstance( size, customEventExtras.getString( "zone_id" ), parentContext );
-            }
-            else
-            {
-                constructor = AppLovinAdView.class.getConstructor( AppLovinAdSize.class, contextClass );
-                adView = (AppLovinAdView) constructor.newInstance( size, parentContext );
-            }
-        }
-        catch ( Throwable th )
-        {
-            log( ERROR, "Unable to create AppLovinAdView." );
-            customEventBannerListener.onAdFailedToLoad( AdRequest.ERROR_CODE_INTERNAL_ERROR );
-        }
-
-        return adView;
-    }
 
     private AppLovinAdSize appLovinAdSizeFromAdMobAdSize(final AdSize adSize)
     {

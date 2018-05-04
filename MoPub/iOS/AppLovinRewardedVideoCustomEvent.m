@@ -61,6 +61,7 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
     
     self.sdk = [self SDKFromCustomEventInfo: info];
     [self.sdk setPluginVersion: @"MoPub-2.1.4"];
+    self.sdk.mediationProvider = ALMediationProviderMoPub;
     
     // Zones support is available on AppLovin SDK 4.5.0 and higher
     NSString *zoneIdentifier;

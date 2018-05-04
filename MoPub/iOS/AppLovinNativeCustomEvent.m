@@ -48,6 +48,7 @@ static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediati
     
     self.sdk = [self SDKFromCustomEventInfo: info];
     [self.sdk setPluginVersion: @"MoPub-2.1.4"];
+    self.sdk.mediationProvider = ALMediationProviderMoPub;
     
     [self.sdk.nativeAdService loadNativeAdGroupOfCount: 1 andNotify: self];
 }

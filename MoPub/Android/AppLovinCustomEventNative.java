@@ -11,6 +11,7 @@ import android.view.View;
 import com.applovin.nativeAds.AppLovinNativeAd;
 import com.applovin.nativeAds.AppLovinNativeAdLoadListener;
 import com.applovin.sdk.AppLovinErrorCodes;
+import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinPostbackListener;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkSettings;
@@ -60,6 +61,7 @@ public class AppLovinCustomEventNative
 
         sdk = retrieveSdk( serverExtras, context );
         sdk.setPluginVersion( "MoPub-2.1.5" );
+        sdk.setMediationProvider( AppLovinMediationProvider.MOPUB );
 
         sdk.getNativeAdService().loadNativeAds( 1, this );
     }

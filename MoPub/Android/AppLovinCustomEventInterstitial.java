@@ -16,6 +16,7 @@ import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinAdVideoPlaybackListener;
 import com.applovin.sdk.AppLovinErrorCodes;
+import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkSettings;
 import com.mopub.mobileads.CustomEventInterstitial;
@@ -84,6 +85,7 @@ public class AppLovinCustomEventInterstitial
 
         sdk = retrieveSdk( serverExtras, context );
         sdk.setPluginVersion( "MoPub-2.1.5" );
+        sdk.setMediationProvider( AppLovinMediationProvider.MOPUB );
 
         // Zones support is available on AppLovin SDK 7.5.0 and higher
         final String serverExtrasZoneId = serverExtras != null ? serverExtras.get( "zone_id" ) : null;

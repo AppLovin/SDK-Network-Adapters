@@ -169,8 +169,8 @@ public class AppLovinCustomEventNative
         {
             super.handleClick( view );
 
-            parentNativeAd.launchClickTarget( view.getContext() );
             notifyAdClicked();
+            parentNativeAd.launchClickTarget( view.getContext() );
         }
 
         @Override

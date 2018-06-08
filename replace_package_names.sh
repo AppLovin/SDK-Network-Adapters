@@ -10,3 +10,5 @@
 LC_ALL=C sed -i '' 's/package YOUR_PACKAGE_NAME/package AdMob.Android/g' AdMob/Android/*.java
 LC_ALL=C sed -i '' 's/package com.applovin.mediation/package AdMob.Android/g' AdMob/Android/*.java
 LC_ALL=C sed -i '' 's/package YOUR_PACKAGE_NAME/package MoPub.Android/g' MoPub/Android/*.java
+
+exit 0

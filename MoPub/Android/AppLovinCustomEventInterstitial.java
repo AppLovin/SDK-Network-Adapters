@@ -16,9 +16,11 @@ import com.applovin.sdk.AppLovinAdLoadListener;
 import com.applovin.sdk.AppLovinAdSize;
 import com.applovin.sdk.AppLovinAdVideoPlaybackListener;
 import com.applovin.sdk.AppLovinErrorCodes;
+import com.applovin.sdk.AppLovinMediationProvider;
 import com.applovin.sdk.AppLovinPrivacySettings;
 import com.applovin.sdk.AppLovinSdk;
 import com.applovin.sdk.AppLovinSdkSettings;
+import com.mopub.common.DataKeys;
 import com.mopub.common.MoPub;
 import com.mopub.common.privacy.PersonalInfoManager;
 import com.mopub.mobileads.CustomEventInterstitial;
@@ -45,8 +47,9 @@ public class AppLovinCustomEventInterstitial
         extends CustomEventInterstitial
         implements AppLovinAdLoadListener, AppLovinAdDisplayListener, AppLovinAdClickListener, AppLovinAdVideoPlaybackListener
 {
-    private static final boolean LOGGING_ENABLED = true;
-    private static final String  DEFAULT_ZONE    = "";
+    private static final boolean LOGGING_ENABLED           = true;
+    private static final String  DEFAULT_ZONE              = "";
+    private static final String  ZONE_ID_SERVER_EXTRAS_KEY = "zone_id";
 
     private static final Handler UI_HANDLER = new Handler( Looper.getMainLooper() );
 
@@ -60,7 +63,9 @@ public class AppLovinCustomEventInterstitial
     private static final Map<String, Queue<AppLovinAd>> GLOBAL_INTERSTITIAL_ADS      = new HashMap<String, Queue<AppLovinAd>>();
     private static final Object                         GLOBAL_INTERSTITIAL_ADS_LOCK = new Object();
 
-    private String zoneId; // The zone identifier this instance of the custom event is loading for
+    private String     zoneId; // The zone identifier this instance of the custom event is loading for
+    private boolean    isTokenEvent;
+    private AppLovinAd tokenAd;
 
     //
     // MoPub Custom Event Methods
@@ -69,8 +74,6 @@ public class AppLovinCustomEventInterstitial
     @Override
     public void loadInterstitial(final Context context, final CustomEventInterstitialListener listener, final Map<String, Object> localExtras, final Map<String, String> serverExtras)
     {
-        log( DEBUG, "Requesting AppLovin interstitial with serverExtras: " + serverExtras + " and localExtras: " + localExtras );
-
         // SDK versions BELOW 7.2.0 require a instance of an Activity to be passed in as the context
         if ( AppLovinSdk.VERSION_CODE < 720 && !( context instanceof Activity ) )
         {
@@ -93,30 +96,44 @@ public class AppLovinCustomEventInterstitial
         this.context = context;
 
         sdk = retrieveSdk( serverExtras, context );
-        sdk.setPluginVersion( "MoPub-3.0.0" );
+        sdk.setPluginVersion( "MoPub-3.1.0" );
+        sdk.setMediationProvider( AppLovinMediationProvider.MOPUB );
 
-        // Zones support is available on AppLovin SDK 7.5.0 and higher
-        final String serverExtrasZoneId = serverExtras != null ? serverExtras.get( "zone_id" ) : null;
-        zoneId = ( !TextUtils.isEmpty( serverExtrasZoneId ) && AppLovinSdk.VERSION_CODE >= 750 ) ? serverExtrasZoneId : DEFAULT_ZONE;
+        final String adMarkup = serverExtras.get( DataKeys.ADM_KEY );
+        final boolean hasAdMarkup = !TextUtils.isEmpty( adMarkup );
 
-        // Check if we already have a preloaded ad for the given zone
-        final AppLovinAd preloadedAd = dequeueAd( zoneId );
-        if ( preloadedAd != null )
+        log( DEBUG, "Requesting AppLovin interstitial with serverExtras: " + serverExtras + ", localExtras: " + localExtras + " and has adMarkup: " + hasAdMarkup );
+
+        if ( hasAdMarkup )
         {
-            log( DEBUG, "Found preloaded ad for zone: {" + zoneId + "}" );
-            adReceived( preloadedAd );
+            isTokenEvent = true;
+
+            // Use token API
+            sdk.getAdService().loadNextAdForAdToken( adMarkup, this );
         }
         else
         {
-            // If this is a default Zone, create the incentivized ad normally
-            if ( DEFAULT_ZONE.equals( zoneId ) )
+            final String serverExtrasZoneId = serverExtras.get( "zone_id" );
+            zoneId = !TextUtils.isEmpty( serverExtrasZoneId ) ? serverExtrasZoneId : DEFAULT_ZONE;
+
+            // Check if we already have a preloaded ad for the given zone
+            final AppLovinAd preloadedAd = dequeueAd( zoneId );
+            if ( preloadedAd != null )
             {
-                sdk.getAdService().loadNextAd( AppLovinAdSize.INTERSTITIAL, this );
+                log( DEBUG, "Found preloaded ad for zone: {" + zoneId + "}" );
+                adReceived( preloadedAd );
             }
-            // Otherwise, use the Zones API
+            // No ad currently preloaded
             else
             {
-                sdk.getAdService().loadNextAdForZoneId( zoneId, this );
+                if ( !TextUtils.isEmpty( zoneId ) )
+                {
+                    sdk.getAdService().loadNextAdForZoneId( zoneId, this );
+                }
+                else
+                {
+                    sdk.getAdService().loadNextAd( AppLovinAdSize.INTERSTITIAL, this );
+                }
             }
         }
     }
@@ -124,7 +141,16 @@ public class AppLovinCustomEventInterstitial
     @Override
     public void showInterstitial()
     {
-        final AppLovinAd preloadedAd = dequeueAd( zoneId );
+        final AppLovinAd preloadedAd;
+        if ( isTokenEvent && tokenAd != null )
+        {
+            preloadedAd = tokenAd;
+        }
+        else
+        {
+            preloadedAd = dequeueAd( zoneId );
+        }
+
         if ( preloadedAd != null )
         {
             final AppLovinInterstitialAdDialog interstitialAd = AppLovinInterstitialAd.create( sdk, context );
@@ -152,7 +178,14 @@ public class AppLovinCustomEventInterstitial
     {
         log( DEBUG, "Interstitial did load ad: " + ad.getAdIdNumber() );
 
-        enqueueAd( ad, zoneId );
+        if ( isTokenEvent )
+        {
+            tokenAd = ad;
+        }
+        else
+        {
+            enqueueAd( ad, zoneId );
+        }
 
         runOnUiThread( new Runnable()
         {

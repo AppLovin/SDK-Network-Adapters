@@ -7,12 +7,15 @@
 //
 
 #import "AppLovinNativeCustomEvent.h"
-#import "MPNativeAdError.h"
-#import "MPNativeAd.h"
-#import "MPNativeAdAdapter.h"
-#import "MPNativeAdConstants.h"
-#import "MPError.h"
-#import "MoPub.h"
+
+#if __has_include("MoPub.h")
+    #import "MPNativeAdError.h"
+    #import "MPNativeAd.h"
+    #import "MPNativeAdAdapter.h"
+    #import "MPNativeAdConstants.h"
+    #import "MPError.h"
+    #import "MoPub.h"
+#endif
 
 #if __has_include(<AppLovinSDK/AppLovinSDK.h>)
     #import <AppLovinSDK/AppLovinSDK.h>
@@ -46,6 +49,11 @@ static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediati
 
 - (void)requestAdWithCustomEventInfo:(NSDictionary *)info
 {
+    [self requestAdWithCustomEventInfo: info adMarkup: nil];
+}
+
+- (void)requestAdWithCustomEventInfo:(NSDictionary *)info adMarkup:(NSString *)adMarkup
+{
     [[self class] log: @"Requesting AppLovin native ad with info: %@", info];
     
     // Collect and pass the user's consent from MoPub into the AppLovin SDK
@@ -56,7 +64,8 @@ static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediati
     }
     
     self.sdk = [self SDKFromCustomEventInfo: info];
-    [self.sdk setPluginVersion: @"MoPub-3.0.0"];
+    [self.sdk setPluginVersion: @"MoPub-3.1.0"];
+    self.sdk.mediationProvider = ALMediationProviderMoPub;
     
     [self.sdk.nativeAdService loadNativeAdGroupOfCount: 1 andNotify: self];
 }

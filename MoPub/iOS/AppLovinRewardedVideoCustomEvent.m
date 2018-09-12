@@ -7,9 +7,13 @@
 //
 
 #import "AppLovinRewardedVideoCustomEvent.h"
-#import "MPRewardedVideoReward.h"
-#import "MPError.h"
-#import "MoPub.h"
+
+#if __has_include("MoPub.h")
+    #import "MPRewardedVideoReward.h"
+    #import "MPError.h"
+    #import "MPLogging.h"
+    #import "MoPub.h"
+#endif
 
 #if __has_include(<AppLovinSDK/AppLovinSDK.h>)
     #import <AppLovinSDK/AppLovinSDK.h>
@@ -19,6 +23,8 @@
 #endif
 
 #define DEFAULT_ZONE @""
+#define DEFAULT_TOKEN_ZONE @"token"
+#define ZONE_FROM_INFO(__INFO) ( ([__INFO[@"zone_id"] isKindOfClass: [NSString class]] && ((NSString *) __INFO[@"zone_id"]).length > 0) ? __INFO[@"zone_id"] : @"" )
 
 // This class implementation with the old classname is left here for backwards compatibility purposes.
 @implementation AppLovinRewardedCustomEvent
@@ -31,6 +37,8 @@
 
 @property (nonatomic, assign) BOOL fullyWatched;
 @property (nonatomic, strong) MPRewardedVideoReward *reward;
+@property (nonatomic, assign, getter=isTokenEvent) BOOL tokenEvent;
+@property (nonatomic, strong) ALAd *tokenAd;
 
 @end
 
@@ -57,8 +65,11 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
 
 - (void)requestRewardedVideoWithCustomEventInfo:(NSDictionary *)info
 {
-    [self log: @"Requesting AppLovin rewarded video with info: %@", info];
-    
+    [self requestRewardedVideoWithCustomEventInfo: info adMarkup: nil];
+}
+
+- (void)requestRewardedVideoWithCustomEventInfo:(NSDictionary *)info adMarkup:(NSString *)adMarkup
+{
     // Collect and pass the user's consent from MoPub into the AppLovin SDK
     if ( [[MoPub sharedInstance] isGDPRApplicable] == MPBoolYes )
     {
@@ -67,49 +78,54 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
     }
     
     self.sdk = [self SDKFromCustomEventInfo: info];
-    [self.sdk setPluginVersion: @"MoPub-3.0.0"];
+    [self.sdk setPluginVersion: @"MoPub-3.1.0"];
+    self.sdk.mediationProvider = ALMediationProviderMoPub;
     
-    // Zones support is available on AppLovin SDK 4.5.0 and higher
+    
+    BOOL hasAdMarkup = adMarkup.length > 0;
+    
+    [self log: @"Requesting AppLovin rewarded video with info: %@ and has ad markup: %d", info, hasAdMarkup];
+    
+    // Determine zone
     NSString *zoneIdentifier;
-    if ( info[@"zone_id"] )
+    if ( hasAdMarkup )
     {
-        zoneIdentifier = info[@"zone_id"];
+        zoneIdentifier = DEFAULT_TOKEN_ZONE;
     }
     else
     {
-        zoneIdentifier = DEFAULT_ZONE;
+        zoneIdentifier = ZONE_FROM_INFO(info);
     }
     
-    // Check if incentivized ad for zone already exists
-    if ( ALGlobalIncentivizedInterstitialAds[zoneIdentifier] )
+    // Create incentivized ad based off of zone
+    self.incent = [[self class] incentivizedInterstitialAdForZoneIdentifier: zoneIdentifier
+                                                                customEvent: self
+                                                                        sdk: self.sdk];
+    
+    // Use token API
+    if ( hasAdMarkup )
     {
-        self.incent = ALGlobalIncentivizedInterstitialAds[zoneIdentifier];
-    }
-    else
-    {
-        // If this is a default Zone, create the incentivized ad normally
-        if ( [DEFAULT_ZONE isEqualToString: zoneIdentifier] )
-        {
-            self.incent = [[ALIncentivizedInterstitialAd alloc] initWithSdk: self.sdk];
-        }
-        // Otherwise, use the Zones API
-        else
-        {
-            self.incent = [[ALIncentivizedInterstitialAd alloc] initWithZoneIdentifier: zoneIdentifier sdk: self.sdk];            
-        }
+        self.tokenEvent = YES;
         
-        ALGlobalIncentivizedInterstitialAds[zoneIdentifier] = self.incent;
+        [self.sdk.adService loadNextAdForAdToken: adMarkup andNotify: self];
     }
-    
-    self.incent.adVideoPlaybackDelegate = self;
-    self.incent.adDisplayDelegate = self;
-    
-    [self.incent preloadAndNotify: self];
+    // Zone/regular ad load
+    else
+    {
+        [self.incent preloadAndNotify: self];
+    }
 }
 
 - (BOOL)hasAdAvailable
 {
-    return self.incent.readyForDisplay;
+    if ( [self isTokenEvent] )
+    {
+        return self.tokenAd != nil;
+    }
+    else
+    {
+        return self.incent.readyForDisplay;
+    }
 }
 
 - (void)presentRewardedVideoFromViewController:(UIViewController *)viewController
@@ -119,7 +135,16 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
         self.reward = nil;
         self.fullyWatched = NO;
         
-        [self.incent showAndNotify: self];
+        if ( [self isTokenEvent] )
+        {
+            [self.incent showOver: [UIApplication sharedApplication].keyWindow
+                         renderAd: self.tokenAd
+                        andNotify: self];
+        }
+        else
+        {
+            [self.incent showAndNotify: self];
+        }
     }
     else
     {
@@ -141,6 +166,11 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
 - (void)adService:(ALAdService *)adService didLoadAd:(ALAd *)ad
 {
     [self log: @"Rewarded video did load ad: %@", ad.adIdNumber];
+    
+    if ( [self isTokenEvent] )
+    {
+        self.tokenAd = ad;
+    }
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.delegate rewardedVideoDidLoadAdForCustomEvent: self];
@@ -288,6 +318,39 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
     {
         return [ALSdk shared];
     }
+}
+
++ (ALIncentivizedInterstitialAd *)incentivizedInterstitialAdForZoneIdentifier:(NSString *)zoneIdentifier
+                                                                  customEvent:(AppLovinRewardedVideoCustomEvent *)customEvent
+                                                                          sdk:(ALSdk *)sdk
+{
+    ALIncentivizedInterstitialAd *incent;
+    
+    // Check if incentivized ad for zone already exists
+    if ( ALGlobalIncentivizedInterstitialAds[zoneIdentifier] )
+    {
+        incent = ALGlobalIncentivizedInterstitialAds[zoneIdentifier];
+    }
+    else
+    {
+        // If this is a default or token Zone, create the incentivized ad normally
+        if ( [DEFAULT_ZONE isEqualToString: zoneIdentifier] || [DEFAULT_TOKEN_ZONE isEqualToString: zoneIdentifier] )
+        {
+            incent = [[ALIncentivizedInterstitialAd alloc] initWithSdk: sdk];
+        }
+        // Otherwise, use the Zones API
+        else
+        {
+            incent = [[ALIncentivizedInterstitialAd alloc] initWithZoneIdentifier: zoneIdentifier sdk: sdk];
+        }
+        
+        ALGlobalIncentivizedInterstitialAds[zoneIdentifier] = incent;
+    }
+    
+    incent.adVideoPlaybackDelegate = customEvent;
+    incent.adDisplayDelegate = customEvent;
+    
+    return incent;
 }
 
 @end

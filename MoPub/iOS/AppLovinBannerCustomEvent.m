@@ -130,17 +130,17 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
 
 - (ALAdSize *)appLovinAdSizeFromRequestedSize:(CGSize)size
 {
-    if ( CGSizeEqualToSize(size, MOPUB_BANNER_SIZE) )
+    if ( CGSizeEqualToSize(size, kMPPresetMaxAdSize50Height) )
     {
-        return [ALAdSize sizeBanner];
+        return ALAdSize.banner;
     }
-    else if ( CGSizeEqualToSize(size, MOPUB_MEDIUM_RECT_SIZE) )
+    else if ( CGSizeEqualToSize(size, kMPPresetMaxAdSize250Height) )
     {
-        return [ALAdSize sizeMRec];
+        return ALAdSize.mrec;
     }
-    else if ( CGSizeEqualToSize(size, MOPUB_LEADERBOARD_SIZE) )
+    else if ( CGSizeEqualToSize(size, kMPPresetMaxAdSize90Height) )
     {
-        return [ALAdSize sizeLeader];
+        return ALAdSize.leader;
     }
     // This is not a one of MoPub's predefined size
     else
@@ -152,11 +152,11 @@ static NSMutableDictionary<NSString *, ALAdView *> *ALGlobalAdViews;
         
         if ( bannerOffset <= kALBannerHeightOffsetTolerance )
         {
-            return [ALAdSize sizeBanner];
+            return ALAdSize.banner;
         }
         else if ( leaderOffset <= kALLeaderHeightOffsetTolerance )
         {
-            return [ALAdSize sizeLeader];
+            return ALAdSize.leader;
         }
     }
     

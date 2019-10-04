@@ -224,14 +224,6 @@ static NSMutableDictionary<NSString *, ALIncentivizedInterstitialAd *> *ALGlobal
     [self log: @"Rewarded video validation request was rejected with response: %@", response];
 }
 
-- (void)userDeclinedToViewAd:(ALAd *)ad
-{
-    [self log: @"User declined to view rewarded video"];
-    
-    [self.delegate rewardedVideoWillDisappearForCustomEvent: self];
-    [self.delegate rewardedVideoDidDisappearForCustomEvent: self];
-}
-
 - (void)rewardValidationRequestForAd:(ALAd *)ad didSucceedWithResponse:(NSDictionary *)response
 {
     NSNumber *amount = response[@"amount"];

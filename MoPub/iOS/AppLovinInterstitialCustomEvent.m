@@ -88,7 +88,7 @@ static NSObject *ALGlobalInterstitialAdsLock;
         // If this is a default Zone, create the incentivized ad normally
         if ( [DEFAULT_ZONE isEqualToString: self.zoneIdentifier] )
         {
-            [self.sdk.adService loadNextAd: [ALAdSize sizeInterstitial] andNotify: self];
+            [self.sdk.adService loadNextAd: ALAdSize.interstitial andNotify: self];
         }
         // Otherwise, use the Zones API
         else
@@ -106,7 +106,7 @@ static NSObject *ALGlobalInterstitialAdsLock;
         self.interstitialAd = [[ALInterstitialAd alloc] initWithSdk: self.sdk];
         self.interstitialAd.adDisplayDelegate = self;
         self.interstitialAd.adVideoPlaybackDelegate = self;
-        [self.interstitialAd showOver: rootViewController.view.window andRender: preloadedAd];
+        [self.interstitialAd showAd: preloadedAd];
     }
     else
     {

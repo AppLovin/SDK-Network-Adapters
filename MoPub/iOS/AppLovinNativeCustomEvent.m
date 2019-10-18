@@ -84,8 +84,6 @@ static NSString *const kALMoPubMediationErrorDomain = @"com.applovin.sdk.mediati
          dispatch_async(dispatch_get_main_queue(), ^{
              [self.delegate nativeCustomEvent: self didLoadAd: nativeAd];
          });
-         
-         [adapter willAttachToView: nil];
      }];
 }
 
